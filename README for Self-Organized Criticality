@@ -1,0 +1,110 @@
+# CST-305 Benchmark Project 5 — File System SOC Simulation
+
+**Course:** CST-305: Principles of Modeling and Simulation  
+**Student:** Chance  
+**Institution:** Grand Canyon University  
+
+---
+
+## Overview
+
+This program simulates the self-organized criticality (SOC) phenomenon in a file system.
+It models how repeated save and delete operations cause fragmentation to build toward a
+critical threshold, at which point the system becomes too slow to operate effectively.
+
+---
+
+## Requirements
+
+- **Python 3.8+**
+- **matplotlib** — plotting library
+- **numpy** — numerical operations
+
+---
+
+## Installation
+
+### 1. Clone / download the project
+
+```bash
+git clone <your-repo-url>
+cd cst305-project5
+```
+
+### 2. Install dependencies
+
+```bash
+pip install matplotlib numpy
+```
+
+> If using a system-managed Python environment (e.g. Ubuntu 24):
+> ```bash
+> pip install matplotlib numpy --break-system-packages
+> ```
+
+---
+
+## Running the Simulation
+
+```bash
+python fs_simulation.py
+```
+
+The program will:
+
+1. Print a step-by-step table to the console showing each save/delete command,
+   current fragmentation ratio, mean access delay, and disk utilisation.
+2. Flag the moment the critical threshold (75% fragmentation) is reached.
+3. Save two output images to the current directory:
+   - `disk_map.png` — block-level grid showing fragmentation at 6 key steps
+   - `metrics_chart.png` — dual-panel line chart of F(t) and D(t) over all steps
+4. Print a final summary of fragmentation ratio, delay, file count, and block usage.
+
+---
+
+## Output Files
+
+| File | Description |
+|------|-------------|
+| `disk_map.png` | Visual disk layout at steps 0, 40, 80, 120, 160, 199 |
+| `metrics_chart.png` | F(t) fragmentation ratio and D(t) mean access delay over time |
+
+---
+
+## Configuration
+
+Key parameters at the top of `fs_simulation.py`:
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `DISK_BLOCKS` | 200 | Total storage blocks |
+| `CRITICAL_THRESHOLD` | 0.75 | Fragmentation ratio that triggers alert |
+| `BASE_ACCESS_TIME` | 1.0 ms | Baseline file access time |
+| `SEEK_PENALTY` | 0.8 ms | Extra delay per additional file extent |
+| `MAX_FILE_SIZE` | 20 | Maximum file size in blocks |
+| `MIN_FILE_SIZE` | 2 | Minimum file size in blocks |
+| `RANDOM_SEED` | 42 | Seed for reproducibility |
+
+---
+
+## Simulation Phases
+
+| Phase | Steps | Behaviour |
+|-------|-------|-----------|
+| A (warm-up) | 0 – 59 | Save files of varied sizes until ~65% disk utilisation |
+| B (fragmentation) | 60 – 199 | Alternate: delete smallest file (punch hole) / save large file |
+
+Phase B is designed to maximally induce fragmentation: small deletions create scattered
+free holes that incoming large files must span across multiple extents.
+
+---
+
+## Project Structure
+
+```
+cst305-project5/
+├── fs_simulation.py   # Main simulation and visualization code
+├── disk_map.png       # Generated: disk block map
+├── metrics_chart.png  # Generated: metrics line chart
+└── README.md          # This file
+```
