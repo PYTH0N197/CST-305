@@ -200,7 +200,7 @@ def plot_disk_snapshots(fs, steps_to_show):
         axes = [axes]
 
     all_fids  = sorted({b for snap in fs.history for b in snap["disk_state"] if b})
-    cmap      = matplotlib.colormaps.get_cmap("tab20")
+    cmap      = plt.get_cmap("tab20")  # compatible with matplotlib < 3.5
     fid_color = {fid: cmap((i % 20) / 20) for i, fid in enumerate(all_fids)}
 
     for ax, step in zip(axes, steps_to_show):
