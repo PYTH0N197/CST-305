@@ -1,0 +1,393 @@
+# CST-305 Project 7 — Code Errors and the Butterfly Effect
+
+**Course:** CST-305 · Principles of Modeling and Simulation  
+**University:** Grand Canyon University  
+**Programmer:** Chance  
+
+---
+
+## What This Project Does
+
+This project is a single Python script that covers two major topics:
+
+**Part 1 — Lorenz Attractor**  
+Models atmospheric convection using three coupled differential equations. Before any window opens, the terminal walks you through entering your own parameters (σ, ρ, β, initial conditions, and animation speed). You then get a static plot, a four-panel parameter comparison, and finally a fully animated version where the butterfly-shaped trajectory draws itself live. Sliders let you change the parameters and re-run the animation in real time.
+
+**Butterfly Effect**  
+Runs two identical simulations with a starting difference of just 0.00001. Shows how that microscopic gap grows into a completely different trajectory — and demonstrates the same exponential error growth happening inside a simple code bug.
+
+**Part 2 — M/M/1 Queue Theory**  
+Solves four network queueing problems: buffer overflow probability, scaling analysis, maximum arrival rate, and a server farm dispatching simulation comparing six different routing policies.
+
+---
+
+## Requirements
+
+You need **Python 3.10 or newer** and three libraries. That is it.
+
+```
+numpy
+scipy
+matplotlib
+```
+
+---
+
+## Setup — Step by Step
+
+### Step 1 — Install Python
+
+If you do not have Python installed, download it from [python.org](https://www.python.org/downloads/).  
+During installation, check the box that says **"Add Python to PATH"**.
+
+To verify it worked, open a terminal and run:
+
+```
+python --version
+```
+
+You should see something like `Python 3.11.4`.
+
+---
+
+### Step 2 — Open the Project in PyCharm
+
+1. Open PyCharm
+2. Click **File → Open**
+3. Navigate to the folder where you saved `cst305_project7.py`
+4. Click **OK**
+
+---
+
+### Step 3 — Set Up a Virtual Environment (Recommended)
+
+A virtual environment keeps this project's packages separate from everything else on your machine.
+
+1. In PyCharm, go to **File → Settings** (on Mac: **PyCharm → Preferences**)
+2. Navigate to **Project → Python Interpreter**
+3. Click the gear icon → **Add Interpreter → Add Local Interpreter**
+4. Select **Virtualenv Environment** → **New environment**
+5. Click **OK**
+
+PyCharm will create the environment automatically.
+
+---
+
+### Step 4 — Install the Required Libraries
+
+Open the **Terminal** tab at the bottom of PyCharm (not the Python Console — the Terminal).
+
+Run this single command:
+
+```bash
+pip install numpy scipy matplotlib
+```
+
+Wait for it to finish. You should see a line ending in `Successfully installed ...` when it is done.
+
+**If you get a permissions error, try:**
+```bash
+pip install --user numpy scipy matplotlib
+```
+
+**If `pip` is not found, try:**
+```bash
+python -m pip install numpy scipy matplotlib
+```
+
+**If `python` is not found, try:**
+```bash
+python3 -m pip install numpy scipy matplotlib
+```
+
+---
+
+### Step 5 — Run the Script
+
+In PyCharm, open `cst305_project7.py` and click the **green Play button (▶)** in the top right corner, or press **Shift + F10**.
+
+The script will start in the **Run** panel at the bottom of the screen.
+
+---
+
+## How to Use It — Terminal Prompts
+
+The very first thing the script does is print a full explanation of the Lorenz system and then ask you for parameters. **No windows will open until you finish answering the prompts.**
+
+You will see something like this in the terminal:
+
+```
+╔══════════════════════════════════════════════════════════════════════════╗
+║         CST-305  ·  Lorenz Attractor  ·  Interactive Visualizer         ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+  The Lorenz system models atmospheric convection with three coupled ODEs:
+
+      dx/dt = σ(y − x)           [sigma]
+      dy/dt = x(ρ − z) − y       [rho]
+      dz/dt = xy − βz            [beta]
+
+────────────────────────────────────────────────────────────────────────
+  Enter Lorenz parameters  (Enter = accept default)
+────────────────────────────────────────────────────────────────────────
+  σ  sigma  (Prandtl number,   typical 10   ) [default 10.0]:
+  ρ  rho    (Rayleigh number,  typical 28   ) [default 28.0]:
+  β  beta   (geometric factor, typical 2.667) [default 2.6667]:
+
+  Initial conditions:
+  x0 [default 1.0]:
+  y0 [default 1.0]:
+  z0 [default 1.0]:
+
+  Integration time T in seconds  (typical 50) [default 50.0]:
+  Animation speed in FPS  (1=slow  60=fast  typical 30) [default 30]:
+```
+
+**For each prompt:**
+- Press **Enter** to use the classic default value shown in brackets
+- Or type your own number and press **Enter**
+
+All prompts must be answered before any figure window opens.
+
+---
+
+### What Each Parameter Means
+
+| Parameter | Default | What it controls |
+|-----------|---------|-----------------|
+| σ (sigma) | 10.0 | Prandtl number — how tightly x and y are coupled. Try values between 5 and 20. |
+| ρ (rho) | 28.0 | Rayleigh number — the main chaos driver. Below 24.74 = periodic orbit. Above = chaos. |
+| β (beta) | 2.667 | Geometric factor — shape of the convection cells. Usually left at 8/3. |
+| x0, y0, z0 | 1.0 each | Starting position in 3D space. Small changes lead to very different long-term paths. |
+| T | 50.0 | Simulation duration in system time units. Higher T shows more of the attractor. |
+| FPS | 30 | Animation speed for Figure 10. Lower = slower and more dramatic. Higher = faster. |
+
+---
+
+### Interesting Values to Try
+
+```
+Classic chaotic butterfly:   σ=10   ρ=28   β=2.667   (the famous default)
+Just below chaos threshold:  σ=10   ρ=24   β=2.667   (produces a spiral)
+Highly chaotic:              σ=10   ρ=99   β=2.667   (complex wild shape)
+Low Prandtl coupling:        σ=5    ρ=28   β=2.667   (rounder attractor)
+Slow dramatic animation:     FPS=5  T=30
+Fast full reveal:            FPS=60 T=50
+Butterfly effect demo:       Use all defaults, watch Figure 3 carefully
+```
+
+---
+
+## The Figures — What You Will See
+
+After you finish the terminal prompts, **10 figures open one at a time**.  
+Close each window to move to the next one. Figure 10 stays open at the end.
+
+---
+
+### Figure 1 — Your Lorenz Attractor
+
+A single 3D plot of the Lorenz attractor using **your terminal-entered parameters**. The trajectory is colour-coded from purple (early time) to yellow (late time). A colourbar on the right shows the time scale.
+
+> **Close this window to continue.**
+
+---
+
+### Figure 2 — Parameter Comparison Grid
+
+Four attractors shown side by side, each with different parameter values:
+
+- **ρ=10** — below the chaos threshold, produces a tidy periodic orbit
+- **ρ=28** — the classic chaotic butterfly shape
+- **ρ=99.9** — highly chaotic, complex fractal-like structure
+- **σ=5** — weakened Prandtl coupling, rounder shape
+
+This shows how sensitive the system is to parameter changes.
+
+> **Close this window to continue.**
+
+---
+
+### Figure 3 — Butterfly Effect: Two Trajectories
+
+Two simulations run side by side. The **only difference** between them is that the second one starts with x₀ shifted by 0.00001. Early in time they look identical. Eventually they diverge completely into different shapes.
+
+This is the butterfly effect: an unmeasurably small difference in starting conditions leads to a completely different outcome.
+
+> **Close this window to continue.**
+
+---
+
+### Figure 4 — Divergence Growth
+
+Plots the distance between the two trajectories from Figure 3 over time on a **log scale**. The distance starts at 0.00001 and grows exponentially. The green dashed line marks the moment the two paths have fully separated.
+
+> **Close this window to continue.**
+
+---
+
+### Figure 5 — The Butterfly Effect in Code
+
+Demonstrates the same exponential error growth happening inside ordinary Python code.
+
+A simple running sum is computed two ways:
+- **Correct version:** uses Python's full floating-point precision
+- **Buggy version:** rounds each intermediate result to 2 decimal places (one line of code)
+
+The top panel shows both sums drifting apart over 1,000 additions. The bottom panel shows the absolute error growing exponentially on a log scale — the exact same pattern as the Lorenz divergence in Figure 4.
+
+> **Close this window to continue.**
+
+---
+
+### Figure 6 — Q1: Buffer Overflow Probability
+
+A network gateway receives 125 packets per second with 2ms service time (μ = 500 pps, ρ = 0.25). This figure plots the probability that a new packet gets dropped as the buffer size K increases.
+
+- **Red dashed line:** K=12 — the given buffer size, P(loss) ≈ 4.47×10⁻⁸
+- **Green dashed line:** minimum K needed to keep packet loss below 1-in-a-million
+- **Orange dotted line:** the 1 ppm target threshold
+
+> **Close this window to continue.**
+
+---
+
+### Figure 7 — Q2: Scaling Analysis
+
+Shows what happens to four M/M/1 queue metrics when both λ and μ are multiplied by the same factor k:
+
+- **Utilization ρ** — stays flat (ratio λ/μ is invariant)
+- **Throughput X** — rises linearly with k
+- **Mean queue length E[N]** — stays flat (depends only on ρ)
+- **Mean sojourn time E[T]** — drops as 1/k (system gets faster)
+
+> **Close this window to continue.**
+
+---
+
+### Figure 8 — Q3: Maximum Arrival Rate
+
+Given a server with 3-minute average service time and a constraint that mean waiting time must stay below 6 minutes, this figure shows the maximum allowable arrival rate.
+
+- **Left panel:** waiting time E[TQ] vs arrival rate λ, with the 6-minute constraint marked
+- **Right panel:** utilization ρ vs arrival rate, showing ρ_max = 2/3
+
+Result: λ_max = 2/9 ≈ 0.222 jobs/min (about 13.3 jobs per hour).
+
+> **Close this window to continue.**
+
+---
+
+### Figure 9 — Q4: Server Farm Dispatching
+
+A discrete-event simulation of 50,000 jobs flowing through a 3-host server farm under six different routing policies:
+
+| Policy | Strategy |
+|--------|----------|
+| Random | Pick a host at random |
+| Round-Robin | Take turns in order |
+| Shortest-Queue | Send to host with fewest waiting jobs |
+| SITA | Route by job size (short/medium/long to dedicated hosts) |
+| LWL | Send to host with least total remaining work |
+| Central-Queue | One shared queue, hosts pull when free |
+
+The left panel shows mean response time per policy. The right panel shows percentage improvement over the Random baseline.
+
+> **Close this window to continue.**
+
+---
+
+### Figure 10 — Animated Interactive Lorenz (stays open)
+
+This is the main interactive window. It uses your terminal-entered parameters and animates the Lorenz trajectory drawing itself segment by segment in real time using a colour-coded plasma gradient.
+
+#### Controls
+
+| Control | Location | What it does |
+|---------|----------|-------------|
+| **σ slider** | Bottom left (cyan) | Adjusts the Prandtl number live |
+| **ρ slider** | Bottom middle (red) | Adjusts the Rayleigh number — cross 24.74 to toggle chaos |
+| **β slider** | Bottom right (green) | Adjusts the geometric factor |
+| **Re-Animate** | Bottom right button | Clears canvas and replays with current slider values |
+| **Clear** | Bottom right button | Wipes the canvas without replaying |
+| **Info panel** | Right side of window | Shows current parameter values, ODE equations, and CHAOTIC / PERIODIC status |
+
+#### Step-by-Step Exploration Guide
+
+1. Watch the default animation complete (the butterfly shape draws itself)
+2. Drag the **ρ slider** down below 24.74 and click **Re-Animate** — the shape collapses to a simple spiral (periodic orbit)
+3. Drag **ρ** back up to 28 and click **Re-Animate** — chaos returns
+4. Try **ρ = 99** for a much larger, more complex attractor
+5. Drag **σ** to 5 and click **Re-Animate** — the coupling weakens and the shape becomes rounder
+6. Click **Clear**, then drag **β** to 1.0 and click **Re-Animate** — dissipation changes, the attractor shrinks
+
+This window stays open until you close it manually.
+
+---
+
+## Troubleshooting
+
+**Figure 10 shows nothing / the animated window is blank**  
+This happens when PyCharm's SciView panel is not enabled. Go to:  
+**File → Settings → Tools → Python Scientific**  
+Check the box that says **"Show plots in tool window"**, then re-run.  
+The animation uses `fig.canvas.new_timer()` which requires this setting to work.
+
+**`ModuleNotFoundError: No module named 'numpy'`**  
+The packages are not installed. Open the Terminal in PyCharm and run:
+```bash
+pip install numpy scipy matplotlib
+```
+
+**PyCharm says "Unresolved reference" for numpy/scipy**  
+The wrong Python interpreter is selected. Go to **File → Settings → Project → Python Interpreter**, confirm the virtual environment you created is selected, and install packages using the **+** button on that screen.
+
+**The animation is too slow**  
+Re-run the script and enter a higher FPS at the prompt (try 45 or 60). You can also reduce T to 20 so there are fewer points to draw.
+
+**The animation is too fast and I can't see the trajectory forming**  
+Re-run and enter FPS = 5 or FPS = 10 for a slow, dramatic reveal.
+
+**The script asks for input but PyCharm is not showing a prompt box**  
+Make sure the script is running in the **Run** panel, not the Python Console. Use the green Play button, not the Console.
+
+**Figures are opening in separate pop-up windows instead of PyCharm's panel**  
+Go to **File → Settings → Tools → Python Scientific** and enable **"Show plots in tool window"**.
+
+---
+
+## File Structure
+
+```
+cst305_project7.py    ← the entire project — run this file
+README.md             ← this guide
+```
+
+There are no other files required. Everything runs from `cst305_project7.py`.
+
+---
+
+## Quick Reference
+
+```
+1.  Open cst305_project7.py in PyCharm
+2.  Hit the green Play button ▶  (or Shift+F10)
+3.  Read the parameter explainer in the terminal
+4.  Answer each prompt — press Enter to accept defaults
+5.  Close Figure 1 to see Figure 2
+6.  Close Figure 2 to see Figure 3
+    ... and so on through Figure 9 ...
+7.  Figure 10 opens last and stays open
+8.  Use the sliders + Re-Animate to explore different attractors
+9.  Close Figure 10 when you are done
+```
+
+---
+
+## References
+
+- Lorenz, E. N. (1963). Deterministic nonperiodic flow. *Journal of the Atmospheric Sciences*, 20(2), 130–141.
+- Strogatz, S. H. (1994). *Nonlinear Dynamics and Chaos*. Addison-Wesley.
+- Kleinrock, L. (1975). *Queueing Systems, Volume 1: Theory*. Wiley-Interscience.
+- SciPy documentation — https://docs.scipy.org
+- Matplotlib documentation — https://matplotlib.org
