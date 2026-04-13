@@ -16,10 +16,8 @@ Approach:
   Part 1 – Lorenz Attractor  (uses terminal-entered values)
     - Fig 1 : Static attractor with user parameters + time colorbar
     - Fig 2 : 2x2 grid showing attractor shape across parameter regimes
-    - Fig 10: Animated attractor driven by fig.canvas.new_timer()
-              (works correctly in PyCharm's SciView panel).
-              Sliders adjust sigma/rho/beta; Re-Animate replays;
-              Clear wipes the canvas; info panel shows chaos status.
+    - Fig 10: Full trajectory summary with parameter reference card
+              (side-by-side 3D plot + equations + chaos status panel)
 
   Butterfly Effect
     - Fig 3: Side-by-side 3D trajectories from IC and IC+epsilon
@@ -46,11 +44,11 @@ Requirements:
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-from matplotlib.widgets import Slider, Button
 from scipy.integrate import solve_ivp
 from collections import deque
 import random
 import heapq
+
 
 # ── Colour palette ────────────────────────────────────────────────────────────
 BG  = "#07090f"
@@ -151,13 +149,12 @@ def get_user_parameters():
     z0 = _ask_float("  z0", 1.0)
     print()
     T   = _ask_float("Integration time T in seconds  (typical 50)", 50.0)
-    fps = _ask_int  ("Animation speed in FPS  (1=slow  60=fast  typical 30)", 30)
     print()
     print("─" * 72)
-    print(f"  σ={sigma}  ρ={rho}  β={beta:.4f}  IC=({x0},{y0},{z0})  T={T}  FPS={fps}")
+    print(f"  sigma={sigma}  rho={rho}  beta={beta:.4f}  IC=({x0},{y0},{z0})  T={T}")
     print("─" * 72)
     print()
-    return sigma, rho, beta, (x0, y0, z0), T, fps
+    return sigma, rho, beta, (x0, y0, z0), T
 
 
 # =============================================================================
@@ -633,249 +630,115 @@ def plot_q4():
 
 
 # =============================================================================
-#  14.  FIGURE 10 – Animated Interactive Lorenz (timer-based, PyCharm-safe)
+#  14.  FIGURE 10 – Final summary: full attractor + parameter info panel
 # =============================================================================
-def _build_info_panel(ax_info, sigma, rho, beta, ic):
-    """Redraw the right-hand parameter info panel."""
-    ax_info.cla()
+def plot_lorenz_summary(sigma, rho, beta, ic, T):
+    """
+    Figure 10 – a clean, fully-rendered static summary of the user's attractor.
+
+    Left panel  : complete trajectory colour-coded by time (plasma colourmap).
+    Right panel : parameter values, ODE equations, and chaos status — printed
+                  as a readable reference card.
+
+    This replaces the interactive animated window, which could not support
+    slider interaction in PyCharm's SciView backend.
+    """
+    print("Plotting Figure 10: Lorenz Attractor – full summary")
+
+    x, y, z = solve_lorenz(sigma, rho, beta,
+                            ic=np.array(ic), t_span=(0, T), n_pts=12_000)
+
+    fig = plt.figure(figsize=(14, 7), facecolor=BG)
+    fig.suptitle(
+        f"Lorenz Attractor  –  Complete Trajectory Summary",
+        color=FG, fontsize=13, y=0.98, fontfamily="monospace")
+
+    gs = gridspec.GridSpec(1, 2, figure=fig,
+                           width_ratios=[3, 1],
+                           left=0.03, right=0.97,
+                           top=0.93, bottom=0.06,
+                           wspace=0.06)
+
+    # ── Left: 3D trajectory ───────────────────────────────────────────────────
+    ax3d = fig.add_subplot(gs[0], projection="3d")
+    _style3d(ax3d,
+             title=f"sigma={sigma:.2f}   rho={rho:.2f}   beta={beta:.3f}"
+                   f"   T={T}   IC=({ic[0]},{ic[1]},{ic[2]})")
+    _draw_traj(ax3d, x, y, z)
+
+    # colourbar showing time axis
+    sm = plt.cm.ScalarMappable(cmap=CMAP, norm=plt.Normalize(vmin=0, vmax=T))
+    sm.set_array([])
+    cb = fig.colorbar(sm, ax=ax3d, shrink=0.55, pad=0.08)
+    cb.set_label("Time  t", color=FG, fontsize=8)
+    cb.ax.yaxis.set_tick_params(color="#4a5568")
+    plt.setp(cb.ax.yaxis.get_ticklabels(), color="#4a5568", fontsize=7)
+
+    # ── Right: info / reference card ─────────────────────────────────────────
+    ax_info = fig.add_subplot(gs[1])
     ax_info.set_facecolor(BG2)
     ax_info.set_xticks([]); ax_info.set_yticks([])
     for s in ax_info.spines.values():
         s.set_edgecolor("#1e2435")
 
+    chaos_status = rho > 24.74
     rows = [
-        ("LORENZ SYSTEM",              FG,        11, True),
-        ("",                           None,       6,  False),
-        ("dx/dt = σ(y − x)",           C1,         9,  False),
-        ("dy/dt = x(ρ − z) − y",       C2,         9,  False),
-        ("dz/dt = xy − βz",            C3,         9,  False),
-        ("",                           None,       6,  False),
-        ("PARAMETERS",                 FG,         9,  True),
-        ("",                           None,       5,  False),
-        (f"σ = {sigma:.3f}",           C1,         9,  False),
-        ("  Prandtl number",           "#7986cb",  7,  False),
-        ("  viscosity/diffusivity",    "#4a5568",  7,  False),
-        ("",                           None,       4,  False),
-        (f"ρ = {rho:.3f}",             C2,         9,  False),
-        ("  Rayleigh number",          "#ef9a9a",  7,  False),
-        ("  buoyancy vs viscosity",    "#4a5568",  7,  False),
-        (f"  chaos onset: ρ > 24.74",
-         C2 if rho > 24.74 else "#4a5568",          7,  False),
-        ("",                           None,       4,  False),
-        (f"β = {beta:.4f}",            C3,         9,  False),
-        ("  Geometric factor",         "#a5d6a7",  7,  False),
-        ("  convection cell shape",    "#4a5568",  7,  False),
-        ("",                           None,       5,  False),
-        ("INITIAL CONDITIONS",         FG,         8,  True),
-        (f"  x0={ic[0]:.2f}  y0={ic[1]:.2f}  z0={ic[2]:.2f}",
-         FG, 8, False),
-        ("",                           None,       5,  False),
-        ("STATUS",                     FG,         8,  True),
-        ("  CHAOTIC" if rho > 24.74 else "  PERIODIC/STABLE",
-         C2 if rho > 24.74 else C3,   9,  True),
+        ("LORENZ SYSTEM",                         FG,        11, True),
+        ("",                                      None,       6, False),
+        ("dx/dt = sigma(y - x)",                  C1,         9, False),
+        ("dy/dt = x(rho - z) - y",                C2,         9, False),
+        ("dz/dt = xy - beta*z",                   C3,         9, False),
+        ("",                                      None,       7, False),
+        ("PARAMETERS",                            FG,         9, True),
+        ("",                                      None,       5, False),
+        (f"sigma = {sigma:.4f}",                  C1,         9, False),
+        ("  Prandtl number",                      "#7986cb",  7, False),
+        ("  viscosity / diffusivity ratio",       "#4a5568",  7, False),
+        ("  controls x-y coupling strength",      "#4a5568",  7, False),
+        ("",                                      None,       4, False),
+        (f"rho   = {rho:.4f}",                    C2,         9, False),
+        ("  Rayleigh number",                     "#ef9a9a",  7, False),
+        ("  buoyancy vs. viscous damping",        "#4a5568",  7, False),
+        ("  chaos threshold: rho > 24.74",
+         C2 if chaos_status else "#4a5568",        7, False),
+        ("",                                      None,       4, False),
+        (f"beta  = {beta:.4f}",                   C3,         9, False),
+        ("  Geometric factor",                    "#a5d6a7",  7, False),
+        ("  convection cell aspect ratio",        "#4a5568",  7, False),
+        ("  z-direction dissipation rate",        "#4a5568",  7, False),
+        ("",                                      None,       6, False),
+        ("INITIAL CONDITIONS",                    FG,         8, True),
+        (f"  x0 = {ic[0]:.3f}",                   FG,         8, False),
+        (f"  y0 = {ic[1]:.3f}",                   FG,         8, False),
+        (f"  z0 = {ic[2]:.3f}",                   FG,         8, False),
+        ("",                                      None,       6, False),
+        ("SIMULATION",                            FG,         8, True),
+        (f"  T  = {T} time units",                FG,         8, False),
+        (f"  n  = 12 000 points",                 FG,         8, False),
+        ("  solver: RK45  rtol=1e-9",             "#4a5568",  7, False),
+        ("",                                      None,       6, False),
+        ("STATUS",                                FG,         9, True),
+        ("  CHAOTIC  (rho > 24.74)" if chaos_status
+         else "  PERIODIC / STABLE",
+         C2 if chaos_status else C3,              10, True),
+        ("  Strange attractor present" if chaos_status
+         else "  Orbits converge to fixed pts",
+         C2 if chaos_status else C3,               7, False),
     ]
 
-    y = 0.97
+    y_pos = 0.97
     for text, color, size, bold in rows:
         if color is None:
-            y -= 0.01
+            y_pos -= 0.010
             continue
-        ax_info.text(0.06, y, text,
+        ax_info.text(0.05, y_pos, text,
                      transform=ax_info.transAxes,
                      color=color, fontsize=size, va="top",
                      fontfamily="monospace",
                      fontweight="bold" if bold else "normal")
-        y -= size * 0.013 + 0.004
+        y_pos -= size * 0.013 + 0.003
 
-
-class _LorenzAnimator:
-    """
-    Timer-driven animated Lorenz attractor.
-
-    Uses fig.canvas.new_timer() instead of FuncAnimation so that
-    PyCharm's SciView panel receives draw events correctly and the
-    trajectory appears incrementally rather than staying blank.
-    """
-
-    def __init__(self, fig, ax3d, ax_info,
-                 ax_sl_sig, ax_sl_rho, ax_sl_bet,
-                 ax_btn_run, ax_btn_clr,
-                 sigma, rho, beta, ic, T, fps):
-
-        self.fig     = fig
-        self.ax3d    = ax3d
-        self.ax_info = ax_info
-        self.ic      = ic
-        self.T       = T
-        self.fps     = fps
-        self.sigma   = sigma
-        self.rho     = rho
-        self.beta    = beta
-
-        self._timer   = None   # matplotlib timer handle
-        self._frame   = 0      # current animation frame index
-        self._indices = []     # list of (start_i, end_i) segment indices
-        self._x = self._y = self._z = None
-        self._cols = None
-
-        # ── sliders ───────────────────────────────────────────────────────────
-        self.sl_sig = Slider(ax_sl_sig, "", 1,   28,  valinit=sigma, color=C1)
-        self.sl_rho = Slider(ax_sl_rho, "", 1,   60,  valinit=rho,   color=C2)
-        self.sl_bet = Slider(ax_sl_bet, "", 0.1,  5,  valinit=beta,  color=C3)
-        for sl in (self.sl_sig, self.sl_rho, self.sl_bet):
-            sl.label.set_color(FG)
-            sl.valtext.set_color(FG)
-            sl.valtext.set_fontfamily("monospace")
-
-        # ── buttons ───────────────────────────────────────────────────────────
-        self.btn_run = Button(ax_btn_run, "Re-Animate",
-                              color="#1a2035", hovercolor="#263050")
-        self.btn_clr = Button(ax_btn_clr, "Clear",
-                              color="#1a2035", hovercolor="#263050")
-        for btn in (self.btn_run, self.btn_clr):
-            btn.label.set_color(FG)
-            btn.label.set_fontfamily("monospace")
-
-        # ── wire callbacks ────────────────────────────────────────────────────
-        self.btn_run.on_clicked(self._on_reanimate)
-        self.btn_clr.on_clicked(self._on_clear)
-        self.sl_sig.on_changed(self._on_slider)
-        self.sl_rho.on_changed(self._on_slider)
-        self.sl_bet.on_changed(self._on_slider)
-
-        # ── kick off ──────────────────────────────────────────────────────────
-        self._start()
-
-    # ── internal helpers ──────────────────────────────────────────────────────
-
-    def _stop_timer(self):
-        if self._timer is not None:
-            try:
-                self._timer.stop()
-            except Exception:
-                pass
-            self._timer = None
-
-    def _clear_ax(self):
-        self.ax3d.cla()
-        _style3d(self.ax3d,
-                 title=f"σ={self.sigma:.2f}  ρ={self.rho:.2f}  β={self.beta:.3f}")
-
-    def _start(self):
-        """Integrate ODE, prepare frame data, start timer."""
-        self._stop_timer()
-        self._read_sliders()
-        self._clear_ax()
-        _build_info_panel(self.ax_info, self.sigma, self.rho, self.beta, self.ic)
-        self.fig.canvas.draw()
-
-        # integrate
-        x, y, z = solve_lorenz(self.sigma, self.rho, self.beta,
-                                ic=np.array(self.ic),
-                                t_span=(0, self.T), n_pts=10_000)
-        self._x, self._y, self._z = x, y, z
-
-        # set axis limits from full solution
-        pad = 2
-        self.ax3d.set_xlim(x.min()-pad, x.max()+pad)
-        self.ax3d.set_ylim(y.min()-pad, y.max()+pad)
-        self.ax3d.set_zlim(z.min()-pad, z.max()+pad)
-
-        # build colour array
-        n = len(x)
-        self._cols = CMAP(np.linspace(0, 1, n - 1))
-
-        # decide how many points to draw per frame so animation
-        # completes in roughly 8 seconds regardless of FPS
-        target_frames = max(60, self.fps * 8)
-        self._step  = max(1, n // target_frames)
-        self._indices = list(range(0, n - self._step, self._step))
-        self._frame = 0
-
-        # start timer  (interval in ms)
-        interval = max(1, int(1000 / self.fps))
-        self._timer = self.fig.canvas.new_timer(interval=interval)
-        self._timer.add_callback(self._tick)
-        self._timer.start()
-
-    def _tick(self):
-        """Called by the timer every interval ms – draws one batch of segments."""
-        if self._frame >= len(self._indices):
-            self._stop_timer()
-            return
-
-        i    = self._indices[self._frame]
-        end  = min(i + self._step + 1, len(self._x))
-        self.ax3d.plot(
-            self._x[i:end],
-            self._y[i:end],
-            self._z[i:end],
-            color=self._cols[min(i, len(self._cols)-1)],
-            lw=0.6, alpha=0.9,
-        )
-        self.fig.canvas.draw()
-        self._frame += 1
-
-    def _read_sliders(self):
-        self.sigma = self.sl_sig.val
-        self.rho   = self.sl_rho.val
-        self.beta  = self.sl_bet.val
-
-    # ── callbacks ─────────────────────────────────────────────────────────────
-
-    def _on_reanimate(self, _event):
-        self._start()
-
-    def _on_clear(self, _event):
-        self._stop_timer()
-        self._clear_ax()
-        self.fig.canvas.draw()
-
-    def _on_slider(self, _val):
-        # live-update info panel while dragging; replay on Re-Animate
-        _build_info_panel(self.ax_info,
-                          self.sl_sig.val, self.sl_rho.val, self.sl_bet.val,
-                          self.ic)
-        self.fig.canvas.draw_idle()
-
-
-def plot_animated_lorenz(sigma, rho, beta, ic, T, fps):
-    print("Opening Figure 10: Animated Interactive Lorenz Attractor")
-
-    fig = plt.figure(figsize=(15, 8.5), facecolor=BG)
-    fig.suptitle("Lorenz Attractor – Animated Interactive Explorer",
-                 color=FG, fontsize=13, y=0.98, fontfamily="monospace")
-
-    # ── layout: 3D plot (left 75%) + info panel (right 25%) ──────────────────
-    gs = gridspec.GridSpec(1, 2, figure=fig,
-                           width_ratios=[3, 1],
-                           left=0.03, right=0.97,
-                           top=0.93, bottom=0.18,
-                           wspace=0.04)
-    ax3d    = fig.add_subplot(gs[0], projection="3d")
-    ax_info = fig.add_subplot(gs[1])
-    ax_info.set_xticks([]); ax_info.set_yticks([])
-    _style3d(ax3d)
-
-    # ── slider label text (above each slider) ─────────────────────────────────
-    fig.text(0.04,  0.155, "σ  sigma  [1–28]",  color=C1, fontsize=8, fontfamily="monospace")
-    fig.text(0.355, 0.155, "ρ  rho   [1–60]",   color=C2, fontsize=8, fontfamily="monospace")
-    fig.text(0.645, 0.155, "β  beta  [0.1–5]",  color=C3, fontsize=8, fontfamily="monospace")
-
-    # ── slider axes ───────────────────────────────────────────────────────────
-    ax_sl_sig = fig.add_axes([0.04,  0.11, 0.28, 0.03], facecolor="#0f1420")
-    ax_sl_rho = fig.add_axes([0.355, 0.11, 0.28, 0.03], facecolor="#0f1420")
-    ax_sl_bet = fig.add_axes([0.645, 0.11, 0.19, 0.03], facecolor="#0f1420")
-    ax_btn_run = fig.add_axes([0.855, 0.075, 0.12, 0.07])
-    ax_btn_clr = fig.add_axes([0.855, 0.150, 0.12, 0.03])
-
-    # ── create animator (wires everything up) ─────────────────────────────────
-    _LorenzAnimator(fig, ax3d, ax_info,
-                    ax_sl_sig, ax_sl_rho, ax_sl_bet,
-                    ax_btn_run, ax_btn_clr,
-                    sigma, rho, beta, ic, T, fps)
-
-    plt.show()   # keeps window open; timer fires inside the event loop
+    plt.show()
 
 
 # =============================================================================
@@ -883,7 +746,7 @@ def plot_animated_lorenz(sigma, rho, beta, ic, T, fps):
 # =============================================================================
 if __name__ == "__main__":
     # ── Step 1: collect parameters from terminal BEFORE opening any window ────
-    sigma, rho, beta, ic, T, fps = get_user_parameters()
+    sigma, rho, beta, ic, T = get_user_parameters()
 
     print("=" * 60)
     print("CST-305 Project 7 – opening figures one at a time.")
@@ -891,19 +754,19 @@ if __name__ == "__main__":
     print("=" * 60)
 
     # ── Part 1: Lorenz Attractor ──────────────────────────────────────────────
-    plot_lorenz_static(sigma, rho, beta, ic, T)   # Fig 1  – user params
-    plot_lorenz_variants()                         # Fig 2  – regime grid
+    plot_lorenz_static(sigma, rho, beta, ic, T)      # Fig 1  – user params
+    plot_lorenz_variants()                            # Fig 2  – regime grid
 
     # ── Butterfly Effect ──────────────────────────────────────────────────────
-    traj1, traj2, t_eval = plot_butterfly_3d()    # Fig 3  – diverging paths
-    plot_butterfly_divergence(traj1, traj2, t_eval)  # Fig 4 – divergence plot
-    plot_code_error()                              # Fig 5  – code bug analog
+    traj1, traj2, t_eval = plot_butterfly_3d()       # Fig 3  – diverging paths
+    plot_butterfly_divergence(traj1, traj2, t_eval)  # Fig 4  – divergence plot
+    plot_code_error()                                 # Fig 5  – code bug analog
 
     # ── Part 2: Queue Theory ──────────────────────────────────────────────────
-    plot_q1()   # Fig 6 – M/M/1/K overflow
-    plot_q2()   # Fig 7 – scaling analysis
-    plot_q3()   # Fig 8 – max arrival rate
-    plot_q4()   # Fig 9 – server farm policies
+    plot_q1()    # Fig 6 – M/M/1/K overflow
+    plot_q2()    # Fig 7 – scaling analysis
+    plot_q3()    # Fig 8 – max arrival rate
+    plot_q4()    # Fig 9 – server farm policies
 
-    # ── Animated interactive window (stays open) ──────────────────────────────
-    plot_animated_lorenz(sigma, rho, beta, ic, T, fps)   # Fig 10
+    # ── Final summary (replaces the broken interactive animated window) ───────
+    plot_lorenz_summary(sigma, rho, beta, ic, T)     # Fig 10 – summary card
